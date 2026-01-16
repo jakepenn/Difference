@@ -24,7 +24,6 @@ export const allCollapsed = writable<boolean>(false);
 export interface HoverContext {
   label: string;
   description?: string;
-  shortcut?: string;
 }
 
 export const hoverContext = writable<HoverContext | null>(null);

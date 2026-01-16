@@ -77,7 +77,7 @@
           size="sm"
           onclick={handleOpenInEditor}
           class="text-[10px] h-5 px-2"
-          onmouseenter={() => setHover({ label: 'open in editor', description: 'open file in default application', shortcut: '⌘E' })}
+          onmouseenter={() => setHover({ label: 'open in editor', description: 'open file in default application' })}
           onmouseleave={clearHover}
         >
           open

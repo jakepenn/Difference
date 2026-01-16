@@ -15,9 +15,13 @@
     setHover,
     clearHover
   } from '../stores';
+  import { setSearchInput } from '../keyboard';
   import FileTreeItem from './FileTreeItem.svelte';
   import { Separator } from '$lib/components/ui/separator';
   import { cn } from '$lib/utils';
+
+  let searchEl: HTMLInputElement;
+  $effect(() => setSearchInput(searchEl));
 
   function toggleStatus(status: 'added' | 'modified' | 'deleted' | 'cosmetic') {
     if (status === 'added') showAdded.update(v => !v);
@@ -39,8 +43,8 @@
     setTimeout(() => fileSearch.set(currentSearch), 10);
   }
 
-  $: isFiltered = !$showAdded || !$showModified || !$showDeleted || !$showCosmetic || $fileSearch.length > 0;
-  $: hiddenCount = $changedFiles.length - $filteredFiles.length;
+  const isFiltered = $derived(!$showAdded || !$showModified || !$showDeleted || !$showCosmetic || $fileSearch.length > 0);
+  const hiddenCount = $derived($changedFiles.length - $filteredFiles.length);
 </script>
 
 <aside class="w-64 flex-shrink-0 bg-card border-r border-border flex flex-col overflow-hidden">
@@ -70,6 +74,7 @@
   <!-- Search -->
   <div class="px-2 py-1.5 border-b border-border flex-shrink-0">
     <input
+      bind:this={searchEl}
       type="text"
       placeholder="filter files..."
       bind:value={$fileSearch}

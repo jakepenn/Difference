@@ -42,6 +42,21 @@ The existing options are painful:
 [+] keyboard-first          — navigate without touching your mouse
 ```
 
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Next file |
+| `k` / `↑` | Previous file |
+| `Enter` | Select first file |
+| `Escape` | Deselect / clear search |
+| `/` | Focus search |
+| `v` | Toggle unified/split view |
+| `o` | Open repository |
+| `r` | Refresh |
+| `1` `2` `3` `4` | Toggle added/modified/deleted/cosmetic |
+| `[` `]` | Collapse/expand all |
+
 <p align="center">
   <img src=".github/assets/diff_view.png" alt="Diff View" width="800" />
 </p>

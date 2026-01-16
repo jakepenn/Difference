@@ -94,7 +94,7 @@
         onclick={refresh}
         disabled={$isLoading}
         class="text-xs h-7 px-2"
-        onmouseenter={() => setHover({ label: 'refresh', description: 'reload file changes from disk', shortcut: '⌘R' })}
+        onmouseenter={() => setHover({ label: 'refresh', description: 'reload file changes from disk' })}
         onmouseleave={clearHover}
       >
         {#if $isLoading}
@@ -113,8 +113,7 @@
       class="text-xs h-7"
       onmouseenter={() => setHover({
         label: $repoInfo ? 'change repository' : 'open repository',
-        description: 'select a git repository folder',
-        shortcut: '⌘O'
+        description: 'select a git repository folder'
       })}
       onmouseleave={clearHover}
     >
