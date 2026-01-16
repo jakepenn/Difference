@@ -10,6 +10,7 @@
     showAdded,
     showModified,
     showDeleted,
+    showCosmetic,
     allCollapsed
   } from '../stores/diff';
   import { setHover, clearHover } from '../stores/ui';
@@ -17,10 +18,11 @@
   import { Separator } from '$lib/components/ui/separator';
   import { cn } from '$lib/utils';
 
-  function toggleStatus(status: 'added' | 'modified' | 'deleted') {
+  function toggleStatus(status: 'added' | 'modified' | 'deleted' | 'cosmetic') {
     if (status === 'added') showAdded.update(v => !v);
     if (status === 'modified') showModified.update(v => !v);
     if (status === 'deleted') showDeleted.update(v => !v);
+    if (status === 'cosmetic') showCosmetic.update(v => !v);
   }
 
   function collapseAll() {
@@ -36,7 +38,7 @@
     setTimeout(() => fileSearch.set(currentSearch), 10);
   }
 
-  $: isFiltered = !$showAdded || !$showModified || !$showDeleted || $fileSearch.length > 0;
+  $: isFiltered = !$showAdded || !$showModified || !$showDeleted || !$showCosmetic || $fileSearch.length > 0;
   $: hiddenCount = $changedFiles.length - $filteredFiles.length;
 </script>
 
@@ -131,6 +133,27 @@
       <span class="font-bold">−</span>
       <span>{$summary.deleted}</span>
     </button>
+
+    {#if $summary.cosmetic > 0}
+      <span class="text-muted-foreground/30">|</span>
+      <button
+        onclick={() => toggleStatus('cosmetic')}
+        class={cn(
+          "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] transition-colors",
+          $showCosmetic
+            ? "bg-muted/50 text-muted-foreground"
+            : "bg-muted/30 text-muted-foreground/40 line-through"
+        )}
+        onmouseenter={() => setHover({
+          label: $showCosmetic ? 'hide cosmetic' : 'show cosmetic',
+          description: `${$summary.cosmetic} cosmetic-only change${$summary.cosmetic !== 1 ? 's' : ''} (comments, whitespace)`
+        })}
+        onmouseleave={clearHover}
+      >
+        <span class="font-bold">◊</span>
+        <span>{$summary.cosmetic}</span>
+      </button>
+    {/if}
   </div>
 
   <!-- File List -->

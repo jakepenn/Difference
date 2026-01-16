@@ -10,6 +10,7 @@ pub struct ChangedFile {
     pub status: String,
     pub additions: i32,
     pub deletions: i32,
+    pub is_cosmetic: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,6 +18,7 @@ pub struct FileDiff {
     pub path: String,
     pub hunks: Vec<DiffHunk>,
     pub is_binary: bool,
+    pub is_cosmetic: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,6 +28,7 @@ pub struct DiffHunk {
     pub new_start: u32,
     pub new_lines: u32,
     pub lines: Vec<DiffLine>,
+    pub is_cosmetic: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,6 +64,137 @@ fn delta_to_status(delta: Delta) -> &'static str {
         Delta::Typechange => "typechange",
         _ => "unknown",
     }
+}
+
+/// Check if a line is a comment based on common patterns
+fn is_comment_line(line: &str) -> bool {
+    let trimmed = line.trim();
+
+    // Empty lines are considered cosmetic
+    if trimmed.is_empty() {
+        return true;
+    }
+
+    // Single-line comments
+    if trimmed.starts_with("//") ||      // C, C++, JS, TS, Rust, Go, Java
+       trimmed.starts_with("#") ||       // Python, Ruby, Shell, YAML
+       trimmed.starts_with("--") ||      // SQL, Lua, Haskell
+       trimmed.starts_with(";") ||       // Lisp, Assembly, INI
+       trimmed.starts_with("*") ||       // JSDoc, block comment continuation
+       trimmed.starts_with("/*") ||      // C-style block comment start
+       trimmed.starts_with("*/") ||      // C-style block comment end
+       trimmed.starts_with("'") ||       // VB
+       trimmed.starts_with("\"\"\"") ||  // Python docstring
+       trimmed.starts_with("'''") ||     // Python docstring
+       trimmed.starts_with("<!--") ||    // HTML/XML
+       trimmed.starts_with("-->") ||     // HTML/XML
+       trimmed.starts_with("rem ") ||    // Batch
+       trimmed.to_lowercase().starts_with("rem ") {
+        return true;
+    }
+
+    false
+}
+
+/// Check if two lines differ only in whitespace
+fn is_whitespace_only_change(old: &str, new: &str) -> bool {
+    // Compare without any whitespace
+    let old_no_ws: String = old.chars().filter(|c| !c.is_whitespace()).collect();
+    let new_no_ws: String = new.chars().filter(|c| !c.is_whitespace()).collect();
+    old_no_ws == new_no_ws
+}
+
+/// Check if two lines differ only in indentation (leading whitespace)
+fn is_indentation_only_change(old: &str, new: &str) -> bool {
+    old.trim_start() == new.trim_start() && old != new
+}
+
+/// Check if two lines differ only in trailing whitespace
+fn is_trailing_whitespace_change(old: &str, new: &str) -> bool {
+    old.trim_end() == new.trim_end() && old != new
+}
+
+/// Check if two lines differ only in case
+fn is_case_only_change(old: &str, new: &str) -> bool {
+    old.to_lowercase() == new.to_lowercase() && old != new
+}
+
+/// Normalize content by removing all whitespace for comparison
+fn normalize_content(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// Check if multiple lines represent a formatting-only change (like line wrapping)
+/// This handles cases where content is reformatted across different line counts
+fn is_formatting_only_change(old_lines: &[&str], new_lines: &[&str]) -> bool {
+    let old_combined = normalize_content(&old_lines.join(""));
+    let new_combined = normalize_content(&new_lines.join(""));
+    old_combined == new_combined
+}
+
+/// Analyze a hunk to determine if it's cosmetic
+fn analyze_hunk_cosmetic(lines: &[DiffLine]) -> bool {
+    let additions: Vec<&str> = lines
+        .iter()
+        .filter(|l| l.line_type == "add")
+        .map(|l| l.content.as_str())
+        .collect();
+
+    let deletions: Vec<&str> = lines
+        .iter()
+        .filter(|l| l.line_type == "delete")
+        .map(|l| l.content.as_str())
+        .collect();
+
+    // If only additions or only deletions, check if all are comments/whitespace/empty
+    if additions.is_empty() && !deletions.is_empty() {
+        return deletions.iter().all(|l| is_comment_line(l));
+    }
+
+    if deletions.is_empty() && !additions.is_empty() {
+        return additions.iter().all(|l| is_comment_line(l));
+    }
+
+    // Check if it's a formatting-only change (content reformatted across lines)
+    // This handles Tailwind class reordering, line wrapping, etc.
+    if is_formatting_only_change(&deletions, &additions) {
+        return true;
+    }
+
+    // If same number of additions and deletions, check pairwise
+    if additions.len() == deletions.len() {
+        for (old, new) in deletions.iter().zip(additions.iter()) {
+            // Both are comments
+            if is_comment_line(old) && is_comment_line(new) {
+                continue;
+            }
+            // Whitespace-only change (any whitespace differs)
+            if is_whitespace_only_change(old, new) {
+                continue;
+            }
+            // Indentation-only change
+            if is_indentation_only_change(old, new) {
+                continue;
+            }
+            // Trailing whitespace change
+            if is_trailing_whitespace_change(old, new) {
+                continue;
+            }
+            // Case-only change
+            if is_case_only_change(old, new) {
+                continue;
+            }
+            // This is a real change
+            return false;
+        }
+        return true;
+    }
+
+    // Different number of adds/deletes - check if all are comments
+    let all_comments = additions.iter().all(|l| is_comment_line(l))
+        && deletions.iter().all(|l| is_comment_line(l));
+
+    all_comments
 }
 
 pub fn get_repo_info(repo_path: &str) -> Result<RepoInfo, String> {
@@ -156,7 +290,9 @@ pub fn get_changed_files(repo_path: &str, base_branch: &str) -> Result<Vec<Chang
         .diff_tree_to_tree(Some(&merge_base_tree), Some(&head_tree), Some(&mut diff_opts))
         .map_err(|e| e.message().to_string())?;
 
+    // Store file info and their diff lines for cosmetic analysis
     let files: RefCell<HashMap<String, ChangedFile>> = RefCell::new(HashMap::new());
+    let file_lines: RefCell<HashMap<String, Vec<(char, String)>>> = RefCell::new(HashMap::new());
 
     diff.foreach(
         &mut |delta, _| {
@@ -172,12 +308,14 @@ pub fn get_changed_files(repo_path: &str, base_branch: &str) -> Result<Vec<Chang
             files.borrow_mut().insert(
                 path.clone(),
                 ChangedFile {
-                    path,
+                    path: path.clone(),
                     status: status.to_string(),
                     additions: 0,
                     deletions: 0,
+                    is_cosmetic: false,
                 },
             );
+            file_lines.borrow_mut().insert(path, Vec::new());
             true
         },
         None,
@@ -190,11 +328,20 @@ pub fn get_changed_files(repo_path: &str, base_branch: &str) -> Result<Vec<Chang
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_default();
 
+            let origin = line.origin();
+            let content = String::from_utf8_lossy(line.content()).to_string();
+
             if let Some(file) = files.borrow_mut().get_mut(&path) {
-                match line.origin() {
+                match origin {
                     '+' => file.additions += 1,
                     '-' => file.deletions += 1,
                     _ => {}
+                }
+            }
+
+            if origin == '+' || origin == '-' {
+                if let Some(lines) = file_lines.borrow_mut().get_mut(&path) {
+                    lines.push((origin, content));
                 }
             }
             true
@@ -203,6 +350,25 @@ pub fn get_changed_files(repo_path: &str, base_branch: &str) -> Result<Vec<Chang
     .map_err(|e| e.message().to_string())?;
 
     let mut files = files.into_inner();
+    let file_lines = file_lines.into_inner();
+
+    // Analyze each file for cosmetic changes
+    for (path, lines) in file_lines.iter() {
+        if let Some(file) = files.get_mut(path) {
+            // Convert to DiffLine format for analysis
+            let diff_lines: Vec<DiffLine> = lines
+                .iter()
+                .map(|(origin, content)| DiffLine {
+                    content: content.clone(),
+                    line_type: if *origin == '+' { "add".to_string() } else { "delete".to_string() },
+                    old_lineno: None,
+                    new_lineno: None,
+                })
+                .collect();
+
+            file.is_cosmetic = !diff_lines.is_empty() && analyze_hunk_cosmetic(&diff_lines);
+        }
+    }
 
     // Also check working directory for uncommitted changes
     let mut status_opts = StatusOptions::new();
@@ -235,6 +401,7 @@ pub fn get_changed_files(repo_path: &str, base_branch: &str) -> Result<Vec<Chang
                     status: status_str.to_string(),
                     additions: 0,
                     deletions: 0,
+                    is_cosmetic: false,
                 },
             );
         }
@@ -302,6 +469,7 @@ pub fn get_file_diff(repo_path: &str, file_path: &str, base_branch: &str) -> Res
                 new_start: hunk.new_start(),
                 new_lines: hunk.new_lines(),
                 lines: Vec::new(),
+                is_cosmetic: false,
             });
             true
         }),
@@ -328,10 +496,21 @@ pub fn get_file_diff(repo_path: &str, file_path: &str, base_branch: &str) -> Res
     )
     .map_err(|e| e.message().to_string())?;
 
+    let mut hunks = hunks.into_inner();
+
+    // Analyze each hunk for cosmetic changes
+    for hunk in hunks.iter_mut() {
+        hunk.is_cosmetic = analyze_hunk_cosmetic(&hunk.lines);
+    }
+
+    // File is cosmetic if all hunks are cosmetic
+    let all_cosmetic = !hunks.is_empty() && hunks.iter().all(|h| h.is_cosmetic);
+
     Ok(FileDiff {
         path: file_path.to_string(),
-        hunks: hunks.into_inner(),
+        hunks,
         is_binary: is_binary.into_inner(),
+        is_cosmetic: all_cosmetic,
     })
 }
 

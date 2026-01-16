@@ -3,6 +3,7 @@ export interface ChangedFile {
   status: 'added' | 'deleted' | 'modified' | 'renamed' | 'copied' | 'typechange' | 'unknown';
   additions: number;
   deletions: number;
+  is_cosmetic: boolean;
 }
 
 export interface DiffLine {
@@ -18,12 +19,14 @@ export interface DiffHunk {
   new_start: number;
   new_lines: number;
   lines: DiffLine[];
+  is_cosmetic: boolean;
 }
 
 export interface FileDiff {
   path: string;
   hunks: DiffHunk[];
   is_binary: boolean;
+  is_cosmetic: boolean;
 }
 
 export interface BranchInfo {

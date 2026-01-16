@@ -16,13 +16,17 @@ export const fileSearch = writable<string>('');
 export const showAdded = writable<boolean>(true);
 export const showModified = writable<boolean>(true);
 export const showDeleted = writable<boolean>(true);
+export const showCosmetic = writable<boolean>(true);
 export const allCollapsed = writable<boolean>(false);
 
 // Filtered files based on search and status toggles
 export const filteredFiles = derived(
-  [changedFiles, fileSearch, showAdded, showModified, showDeleted],
-  ([$files, $search, $showAdded, $showModified, $showDeleted]) => {
+  [changedFiles, fileSearch, showAdded, showModified, showDeleted, showCosmetic],
+  ([$files, $search, $showAdded, $showModified, $showDeleted, $showCosmetic]) => {
     return $files.filter((file) => {
+      // Cosmetic filter - hide cosmetic-only changes when disabled
+      if (!$showCosmetic && file.is_cosmetic) return false;
+
       // Status filter
       const status = file.status;
       if (status === 'added' && !$showAdded) return false;
@@ -104,13 +108,15 @@ export const summary = derived(changedFiles, ($files) => {
   const added = $files.filter(f => f.status === 'added').length;
   const modified = $files.filter(f => f.status === 'modified').length;
   const deleted = $files.filter(f => f.status === 'deleted').length;
+  const cosmetic = $files.filter(f => f.is_cosmetic).length;
   return {
     fileCount: $files.length,
     additions: totalAdditions,
     deletions: totalDeletions,
     added,
     modified,
-    deleted
+    deleted,
+    cosmetic
   };
 });
 

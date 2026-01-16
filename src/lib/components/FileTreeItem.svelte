@@ -5,8 +5,12 @@
   import { getFileDiff } from '../tauri';
   import { cn } from '$lib/utils';
 
-  export let node: FileTreeNode;
-  export let depth: number;
+  interface Props {
+    node: FileTreeNode;
+    depth: number;
+  }
+
+  let { node, depth }: Props = $props();
 
   let expanded = $state(node.expanded ?? true);
 
@@ -74,9 +78,10 @@
       const stats = node.file.additions > 0 || node.file.deletions > 0
         ? `+${node.file.additions} -${node.file.deletions}`
         : '';
+      const cosmetic = node.file.is_cosmetic ? ' (cosmetic)' : '';
       setHover({
         label: node.path,
-        description: `${getStatusLabel(node.file.status)}${stats ? ' · ' + stats : ''}`
+        description: `${getStatusLabel(node.file.status)}${cosmetic}${stats ? ' · ' + stats : ''}`
       });
     }
   }
@@ -106,7 +111,10 @@
       <span class="w-3 text-center font-bold {getStatusColor(node.file.status)}">
         {getStatusIcon(node.file.status)}
       </span>
-      <span class="truncate flex-1">{node.name}</span>
+      <span class={node.file.is_cosmetic ? "truncate flex-1 opacity-50" : "truncate flex-1"}>{node.name}</span>
+      {#if node.file.is_cosmetic}
+        <span class="text-[10px] text-muted-foreground/50" title="cosmetic">◊</span>
+      {/if}
       {#if node.file.additions > 0 || node.file.deletions > 0}
         <span class="text-[10px] text-muted-foreground tabular-nums">
           <span class="text-green-400/70">+{node.file.additions}</span>

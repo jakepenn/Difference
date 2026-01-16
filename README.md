@@ -1,38 +1,83 @@
-# sv
+<p align="center">
+  <img src="docs/hero.png" alt="Difference" width="800" />
+</p>
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+<h1 align="center">DIFFERENCE</h1>
 
-## Creating a project
+<p align="center">
+  <strong>A fast, minimal git branch diff viewer for the AI era.</strong>
+</p>
 
-If you're seeing this, you've probably already done this step. Congrats!
+<p align="center">
+  <a href="#why">Why</a> •
+  <a href="#features">Features</a> •
+  <a href="#install">Install</a> •
+  <a href="#usage">Usage</a> •
+  <a href="#stack">Stack</a>
+</p>
 
-```sh
-# create a new project in the current directory
-npx sv create
+---
 
-# create a new project in my-app
-npx sv create my-app
+## Why
+
+AI coding tools generate massive diffs. Hundreds of files. Thousands of lines.
+
+The existing options are painful:
+
+- **GitHub** — Open a PR just to see your changes? Then wait for their slow diff renderer to choke on large changesets? No thanks.
+- **Git GUIs** — Bloated apps with features you'll never use. Slow to launch, slower to navigate.
+- **Terminal** — `git diff` works, but scrolling through 50 files in a terminal isn't reviewing, it's suffering.
+
+**Difference** is built for one thing: viewing branch diffs. Fast. Locally. Without the cruft.
+
+## Features
+
+```
+[+] instant local diffs     — no PR required, no network latency
+[+] unified & split views   — toggle between diff styles
+[+] file tree navigation    — browse changes by directory structure
+[+] status filters          — show/hide added, modified, deleted files
+[+] cosmetic detection      — identify comment-only and whitespace changes
+[+] fuzzy search            — quickly find files in large changesets
+[+] keyboard-first          — navigate without touching your mouse
 ```
 
-## Developing
+## Install
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+```bash
+# clone
+git clone https://github.com/yourusername/difference.git
+cd difference
 
-```sh
-npm run dev
+# install dependencies
+bun install
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# run in development
+bun tauri dev
+
+# build for production
+bun tauri build
 ```
 
-## Building
+Requires [Rust](https://rustup.rs/) and [Bun](https://bun.sh/).
 
-To create a production version of your app:
+## Usage
 
-```sh
-npm run build
-```
+1. Click **open** or drag a git repository folder
+2. Select your base branch (defaults to `main`)
+3. Browse changed files, review diffs
 
-You can preview the production build with `npm run preview`.
+That's it. No accounts. No sync. No telemetry.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+## Stack
+
+- **[Tauri](https://tauri.app)** — Lightweight native shell
+- **[Svelte](https://svelte.dev)** — Reactive UI
+- **[git2-rs](https://github.com/rust-lang/git2-rs)** — Native git operations
+- **[shadcn-svelte](https://shadcn-svelte.com)** — Component primitives
+
+---
+
+<p align="center">
+  <sub>Built for developers who ship fast and review faster.</sub>
+</p>
