@@ -2,12 +2,12 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Difference",
   "version": "0.1.0",
-  "identifier": "com.difference.app",
+  "identifier": "com.difference.desktop",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "bun dev",
-    "beforeBuildCommand": "bun build"
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
   },
   "app": {
     "windows": [

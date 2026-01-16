@@ -94,6 +94,7 @@
     onclick={handleClick}
     onmouseenter={handleMouseEnter}
     onmouseleave={clearHover}
+    data-file-path={node.file ? node.path : undefined}
     class={cn(
       "w-full text-left px-2 py-0.5 text-xs flex items-center gap-1.5 transition-colors",
       "hover:bg-accent",

@@ -85,7 +85,7 @@
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto">
+    <div class="flex-1 min-h-0 overflow-y-auto" data-diff-scroll>
       {#if $currentDiff.is_binary}
         <div class="flex items-center justify-center h-full text-muted-foreground py-20 text-xs">
           binary

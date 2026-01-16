@@ -65,15 +65,19 @@ export function handleKeyboard(e: KeyboardEvent) {
     // Filters
     case '1':
       showAdded.update(v => !v);
+      handleFilterChange();
       break;
     case '2':
       showModified.update(v => !v);
+      handleFilterChange();
       break;
     case '3':
       showDeleted.update(v => !v);
+      handleFilterChange();
       break;
     case '4':
       showCosmetic.update(v => !v);
+      handleFilterChange();
       break;
 
     // Tree
@@ -97,9 +101,38 @@ async function selectFile(files: ChangedFile[], idx: number) {
   try {
     const diff = await getFileDiff(get(repoPath), file.path, get(baseBranch));
     currentDiff.set(diff);
+
+    // Scroll file into view in tree
+    setTimeout(() => {
+      const el = document.querySelector(`[data-file-path="${file.path}"]`);
+      el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 10);
+
+    // Reset diff scroll to top
+    setTimeout(() => {
+      document.querySelector('[data-diff-scroll]')?.scrollTo(0, 0);
+    }, 10);
   } finally {
     isLoading.set(false);
   }
+}
+
+function handleFilterChange() {
+  // After filter toggle, check if selected file is still visible
+  setTimeout(() => {
+    const files = get(filteredFiles);
+    const current = get(selectedFile);
+
+    if (current && !files.find(f => f.path === current)) {
+      // Selected file was filtered out
+      if (files.length > 0) {
+        selectFile(files, 0);
+      } else {
+        selectedFile.set(null);
+        currentDiff.set(null);
+      }
+    }
+  }, 0);
 }
 
 async function openRepo() {
