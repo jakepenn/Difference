@@ -81,7 +81,9 @@ jobs:
         run: bun run build
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall tauri-cli --no-confirm
 
       - name: Build Tauri app (universal)
         run: cargo tauri build --target universal-apple-darwin
@@ -152,7 +154,10 @@ jobs:
         run: bun run build
 
       - name: Install Tauri CLI
-        run: cargo install tauri-cli
+        run: |
+          Set-ExecutionPolicy Unrestricted -Scope Process
+          iex "& { $(irm https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.ps1) }"
+          cargo binstall tauri-cli --no-confirm
 
       - name: Build Tauri app
         run: cargo tauri build
