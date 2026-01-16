@@ -11,6 +11,44 @@ export const isLoading = writable<boolean>(false);
 export const error = writable<string | null>(null);
 export const viewMode = writable<'unified' | 'split'>('unified');
 
+// File tree filters
+export const fileSearch = writable<string>('');
+export const showAdded = writable<boolean>(true);
+export const showModified = writable<boolean>(true);
+export const showDeleted = writable<boolean>(true);
+export const allCollapsed = writable<boolean>(false);
+
+// Filtered files based on search and status toggles
+export const filteredFiles = derived(
+  [changedFiles, fileSearch, showAdded, showModified, showDeleted],
+  ([$files, $search, $showAdded, $showModified, $showDeleted]) => {
+    return $files.filter((file) => {
+      // Status filter
+      const status = file.status;
+      if (status === 'added' && !$showAdded) return false;
+      if (status === 'modified' && !$showModified) return false;
+      if (status === 'deleted' && !$showDeleted) return false;
+
+      // Search filter (case-insensitive fuzzy match on path)
+      if ($search) {
+        const searchLower = $search.toLowerCase();
+        const pathLower = file.path.toLowerCase();
+
+        // Simple fuzzy: check if all characters appear in order
+        let searchIdx = 0;
+        for (let i = 0; i < pathLower.length && searchIdx < searchLower.length; i++) {
+          if (pathLower[i] === searchLower[searchIdx]) {
+            searchIdx++;
+          }
+        }
+        if (searchIdx < searchLower.length) return false;
+      }
+
+      return true;
+    });
+  }
+);
+
 function buildFileTree(files: ChangedFile[]): FileTreeNode[] {
   const root: FileTreeNode[] = [];
 
@@ -57,9 +95,27 @@ function buildFileTree(files: ChangedFile[]): FileTreeNode[] {
   return sortNodes(root);
 }
 
-export const fileTree = derived(changedFiles, ($files) => buildFileTree($files));
+export const fileTree = derived(filteredFiles, ($files) => buildFileTree($files));
 
+// Summary of all files (not filtered)
 export const summary = derived(changedFiles, ($files) => {
+  const totalAdditions = $files.reduce((sum, f) => sum + f.additions, 0);
+  const totalDeletions = $files.reduce((sum, f) => sum + f.deletions, 0);
+  const added = $files.filter(f => f.status === 'added').length;
+  const modified = $files.filter(f => f.status === 'modified').length;
+  const deleted = $files.filter(f => f.status === 'deleted').length;
+  return {
+    fileCount: $files.length,
+    additions: totalAdditions,
+    deletions: totalDeletions,
+    added,
+    modified,
+    deleted
+  };
+});
+
+// Summary of filtered files
+export const filteredSummary = derived(filteredFiles, ($files) => {
   const totalAdditions = $files.reduce((sum, f) => sum + f.additions, 0);
   const totalDeletions = $files.reduce((sum, f) => sum + f.deletions, 0);
   return {

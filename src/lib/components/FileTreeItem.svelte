@@ -1,13 +1,21 @@
 <script lang="ts">
   import type { FileTreeNode } from '../types';
-  import { selectedFile, currentDiff, repoPath, baseBranch, isLoading } from '../stores/diff';
+  import { selectedFile, currentDiff, repoPath, baseBranch, isLoading, allCollapsed } from '../stores/diff';
+  import { setHover, clearHover } from '../stores/ui';
   import { getFileDiff } from '../tauri';
   import { cn } from '$lib/utils';
 
   export let node: FileTreeNode;
   export let depth: number;
 
-  let expanded = node.expanded ?? true;
+  let expanded = $state(node.expanded ?? true);
+
+  // React to collapse all trigger
+  $effect(() => {
+    if ($allCollapsed && node.isDirectory) {
+      expanded = false;
+    }
+  });
 
   async function handleClick() {
     if (node.isDirectory) {
@@ -46,13 +54,42 @@
     }
   }
 
-  $: isSelected = $selectedFile === node.path;
-  $: paddingLeft = `${depth * 10 + 8}px`;
+  function getStatusLabel(status: string): string {
+    switch (status) {
+      case 'added': return 'new file';
+      case 'deleted': return 'deleted';
+      case 'modified': return 'modified';
+      case 'renamed': return 'renamed';
+      default: return 'unchanged';
+    }
+  }
+
+  function handleMouseEnter() {
+    if (node.isDirectory) {
+      setHover({
+        label: node.path,
+        description: `${node.children.length} item${node.children.length !== 1 ? 's' : ''}`
+      });
+    } else if (node.file) {
+      const stats = node.file.additions > 0 || node.file.deletions > 0
+        ? `+${node.file.additions} -${node.file.deletions}`
+        : '';
+      setHover({
+        label: node.path,
+        description: `${getStatusLabel(node.file.status)}${stats ? ' · ' + stats : ''}`
+      });
+    }
+  }
+
+  const isSelected = $derived($selectedFile === node.path);
+  const paddingLeft = $derived(`${depth * 10 + 8}px`);
 </script>
 
 <div>
   <button
     onclick={handleClick}
+    onmouseenter={handleMouseEnter}
+    onmouseleave={clearHover}
     class={cn(
       "w-full text-left px-2 py-0.5 text-xs flex items-center gap-1.5 transition-colors",
       "hover:bg-accent",
@@ -80,7 +117,7 @@
   </button>
 
   {#if node.isDirectory && expanded}
-    {#each node.children as child}
+    {#each node.children as child (child.path)}
       <svelte:self node={child} depth={depth + 1} />
     {/each}
   {/if}

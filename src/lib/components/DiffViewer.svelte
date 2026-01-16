@@ -1,9 +1,9 @@
 <script lang="ts">
   import { currentDiff, selectedFile, viewMode, repoPath } from '../stores/diff';
+  import { setHover, clearHover } from '../stores/ui';
   import { openInEditor } from '../tauri';
   import { Button } from '$lib/components/ui/button';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { cn } from '$lib/utils';
 
   async function handleOpenInEditor() {
@@ -37,7 +37,7 @@
   }
 </script>
 
-<main class="flex-1 flex flex-col overflow-hidden bg-background">
+<main class="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
   {#if !$selectedFile}
     <div class="flex-1 flex items-center justify-center text-muted-foreground">
       <div class="text-center">
@@ -46,31 +46,47 @@
       </div>
     </div>
   {:else if $currentDiff}
-    <div class="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border">
-      <div class="flex items-center gap-2">
-        <span class="text-xs text-foreground/70">{$currentDiff.path}</span>
+    <div class="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border flex-shrink-0">
+      <div
+        class="flex items-center gap-2 min-w-0"
+        onmouseenter={() => setHover({ label: $currentDiff?.path ?? '', description: 'current file' })}
+        onmouseleave={clearHover}
+      >
+        <span class="text-xs text-foreground/70 truncate">{$currentDiff.path}</span>
       </div>
-      <div class="flex items-center gap-2">
-        <ToggleGroup.Root
-          type="single"
-          value={$viewMode}
-          onValueChange={(v) => { if (v) $viewMode = v as 'unified' | 'split'; }}
-          class="bg-muted/50 rounded p-0.5"
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <div
+          onmouseenter={() => setHover({ label: 'view mode', description: 'toggle between unified and split diff views' })}
+          onmouseleave={clearHover}
         >
-          <ToggleGroup.Item value="unified" class="text-[10px] px-2 py-0.5 h-5 data-[state=on]:bg-background rounded-sm">
-            unified
-          </ToggleGroup.Item>
-          <ToggleGroup.Item value="split" class="text-[10px] px-2 py-0.5 h-5 data-[state=on]:bg-background rounded-sm">
-            split
-          </ToggleGroup.Item>
-        </ToggleGroup.Root>
-        <Button variant="ghost" size="sm" onclick={handleOpenInEditor} class="text-[10px] h-5 px-2">
+          <ToggleGroup.Root
+            type="single"
+            value={$viewMode}
+            onValueChange={(v) => { if (v) $viewMode = v as 'unified' | 'split'; }}
+            class="bg-muted/50 rounded p-0.5"
+          >
+            <ToggleGroup.Item value="unified" class="text-[10px] px-2 py-0.5 h-5 data-[state=on]:bg-background rounded-sm">
+              unified
+            </ToggleGroup.Item>
+            <ToggleGroup.Item value="split" class="text-[10px] px-2 py-0.5 h-5 data-[state=on]:bg-background rounded-sm">
+              split
+            </ToggleGroup.Item>
+          </ToggleGroup.Root>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onclick={handleOpenInEditor}
+          class="text-[10px] h-5 px-2"
+          onmouseenter={() => setHover({ label: 'open in editor', description: 'open file in default application', shortcut: '⌘E' })}
+          onmouseleave={clearHover}
+        >
           open
         </Button>
       </div>
     </div>
 
-    <ScrollArea class="flex-1">
+    <div class="flex-1 min-h-0 overflow-y-auto">
       {#if $currentDiff.is_binary}
         <div class="flex items-center justify-center h-full text-muted-foreground py-20 text-xs">
           binary
@@ -149,7 +165,7 @@
           </div>
         </div>
       {/if}
-    </ScrollArea>
+    </div>
   {:else}
     <div class="flex-1 flex items-center justify-center text-muted-foreground text-xs">
       ...

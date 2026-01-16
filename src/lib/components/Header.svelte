@@ -1,9 +1,10 @@
 <script lang="ts">
   import { repoPath, repoInfo, baseBranch, isLoading, changedFiles, selectedFile, currentDiff, error } from '../stores/diff';
+  import { setHover, clearHover } from '../stores/ui';
   import { selectFolder, getRepoInfo, getChangedFiles } from '../tauri';
   import { Button } from '$lib/components/ui/button';
-  import * as Select from '$lib/components/ui/select';
   import { Badge } from '$lib/components/ui/badge';
+  import BranchSelector from './BranchSelector.svelte';
 
   async function handleSelectFolder() {
     const folder = await selectFolder();
@@ -49,8 +50,12 @@
     }
   }
 
+  function handleBranchChange(newBranch: string) {
+    $baseBranch = newBranch;
+    refresh();
+  }
+
   $: localBranches = $repoInfo?.branches.filter(b => !b.is_remote) ?? [];
-  $: selectedBranchLabel = localBranches.find(b => b.name === $baseBranch)?.name ?? $baseBranch;
 </script>
 
 <header class="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border">
@@ -59,26 +64,25 @@
 
     {#if $repoInfo}
       <div class="flex items-center gap-2 text-xs">
-        <Badge variant="outline" class="font-mono text-xs px-2 py-0.5 border-foreground/20">
-          {$repoInfo.current_branch}
-        </Badge>
-        <span class="text-muted-foreground">/</span>
-        <Select.Root
-          type="single"
-          value={{ value: $baseBranch, label: selectedBranchLabel }}
-          onValueChange={(v) => { if (v) { $baseBranch = v.value; refresh(); } }}
+        <!-- Base branch (left) - what you're comparing against -->
+        <BranchSelector
+          branches={localBranches}
+          value={$baseBranch}
+          onValueChange={handleBranchChange}
+        />
+
+        <span class="text-muted-foreground/40">→</span>
+
+        <!-- Current branch (right) - your working state -->
+        <div
+          role="status"
+          onmouseenter={() => setHover({ label: 'current branch', description: 'your working branch with changes' })}
+          onmouseleave={clearHover}
         >
-          <Select.Trigger class="w-[120px] h-7 text-xs">
-            {selectedBranchLabel}
-          </Select.Trigger>
-          <Select.Content>
-            {#each localBranches as branch}
-              <Select.Item value={branch.name} label={branch.name} class="text-xs">
-                {branch.name}
-              </Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
+          <Badge variant="outline" class="font-mono text-xs px-2 py-0.5 border-foreground/20">
+            {$repoInfo.current_branch}
+          </Badge>
+        </div>
       </div>
     {/if}
   </div>
@@ -91,6 +95,8 @@
         onclick={refresh}
         disabled={$isLoading}
         class="text-xs h-7 px-2"
+        onmouseenter={() => setHover({ label: 'refresh', description: 'reload file changes from disk', shortcut: '⌘R' })}
+        onmouseleave={clearHover}
       >
         {#if $isLoading}
           <span class="animate-pulse">...</span>
@@ -102,7 +108,17 @@
       </Button>
     {/if}
 
-    <Button size="sm" onclick={handleSelectFolder} class="text-xs h-7">
+    <Button
+      size="sm"
+      onclick={handleSelectFolder}
+      class="text-xs h-7"
+      onmouseenter={() => setHover({
+        label: $repoInfo ? 'change repository' : 'open repository',
+        description: 'select a git repository folder',
+        shortcut: '⌘O'
+      })}
+      onmouseleave={clearHover}
+    >
       {$repoInfo ? 'change' : 'open'}
     </Button>
   </div>
