@@ -20,6 +20,9 @@ export const showDeleted = writable<boolean>(true);
 export const showCosmetic = writable<boolean>(true);
 export const allCollapsed = writable<boolean>(false);
 
+// Help modal
+export const showHelp = writable<boolean>(false);
+
 // UI hover context
 export interface HoverContext {
   label: string;

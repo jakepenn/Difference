@@ -2,7 +2,8 @@ import { get } from 'svelte/store';
 import {
   selectedFile, filteredFiles, repoPath, baseBranch, repoInfo,
   currentDiff, isLoading, viewMode, fileSearch, changedFiles,
-  showAdded, showModified, showDeleted, showCosmetic, allCollapsed
+  showAdded, showModified, showDeleted, showCosmetic, allCollapsed,
+  showHelp
 } from './stores';
 import { getFileDiff, selectFolder, getRepoInfo, getChangedFiles, watchRepo } from './tauri';
 import type { ChangedFile } from './types';
@@ -20,6 +21,18 @@ export function handleKeyboard(e: KeyboardEvent) {
       (e.target as HTMLInputElement).blur();
       fileSearch.set('');
     }
+    return;
+  }
+
+  // Handle help modal toggle
+  if (e.key === '?') {
+    e.preventDefault();
+    showHelp.update(v => !v);
+    return;
+  }
+
+  // Skip other keys if help modal is open
+  if (get(showHelp)) {
     return;
   }
 
