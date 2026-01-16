@@ -48,6 +48,7 @@
     <div class="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border flex-shrink-0">
       <div
         class="flex items-center gap-2 min-w-0"
+        role="group"
         onmouseenter={() => setHover({ label: $currentDiff?.path ?? '', description: 'current file' })}
         onmouseleave={clearHover}
       >
@@ -55,6 +56,7 @@
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
         <div
+          role="group"
           onmouseenter={() => setHover({ label: 'view mode', description: 'toggle between unified and split diff views' })}
           onmouseleave={clearHover}
         >

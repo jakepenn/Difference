@@ -1,6 +1,8 @@
 mod git_ops;
+mod git_watcher;
 
 use git_ops::{ChangedFile, FileDiff, RepoInfo};
+use git_watcher::{create_watcher_handle, WatcherHandle};
 
 #[tauri::command]
 fn get_repo_info(repo_path: String) -> Result<RepoInfo, String> {
@@ -22,11 +24,22 @@ fn open_in_editor(repo_path: String, file_path: String) -> Result<(), String> {
     git_ops::open_in_editor(&repo_path, &file_path)
 }
 
+#[tauri::command]
+fn watch_repo(app: tauri::AppHandle, state: tauri::State<WatcherHandle>, repo_path: String) -> Result<(), String> {
+    git_watcher::start_watching(app, state.inner().clone(), repo_path)
+}
+
+#[tauri::command]
+fn stop_watching(state: tauri::State<WatcherHandle>) -> Result<(), String> {
+    git_watcher::stop_watching(state.inner().clone())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .manage(create_watcher_handle())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -42,6 +55,8 @@ pub fn run() {
             get_changed_files,
             get_file_diff,
             open_in_editor,
+            watch_repo,
+            stop_watching,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

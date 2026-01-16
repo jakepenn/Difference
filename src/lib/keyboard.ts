@@ -4,7 +4,7 @@ import {
   currentDiff, isLoading, viewMode, fileSearch, changedFiles,
   showAdded, showModified, showDeleted, showCosmetic, allCollapsed
 } from './stores';
-import { getFileDiff, selectFolder, getRepoInfo, getChangedFiles } from './tauri';
+import { getFileDiff, selectFolder, getRepoInfo, getChangedFiles, watchRepo } from './tauri';
 import type { ChangedFile } from './types';
 
 let searchInput: HTMLInputElement | null = null;
@@ -146,12 +146,14 @@ async function openRepo() {
     repoInfo.set(info);
     baseBranch.set(info.default_base);
     await refresh();
+    // Start watching this repo for changes
+    await watchRepo(folder);
   } finally {
     isLoading.set(false);
   }
 }
 
-async function refresh() {
+export async function refresh() {
   const path = get(repoPath);
   const base = get(baseBranch);
   if (!path || !base) return;
@@ -162,6 +164,27 @@ async function refresh() {
     changedFiles.set(files);
     selectedFile.set(null);
     currentDiff.set(null);
+  } finally {
+    isLoading.set(false);
+  }
+}
+
+// Full refresh including branch info (for when branch changes)
+export async function refreshAll() {
+  const path = get(repoPath);
+  if (!path) return;
+
+  isLoading.set(true);
+  try {
+    const info = await getRepoInfo(path);
+    repoInfo.set(info);
+    // Keep current base branch selection unless it no longer exists
+    const currentBase = get(baseBranch);
+    const branchExists = info.branches.some(b => b.name === currentBase);
+    if (!branchExists) {
+      baseBranch.set(info.default_base);
+    }
+    await refresh();
   } finally {
     isLoading.set(false);
   }

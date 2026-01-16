@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { ChangedFile, FileDiff, RepoInfo } from './types';
 
@@ -25,4 +26,22 @@ export async function selectFolder(): Promise<string | null> {
     title: 'Select Git Repository'
   });
   return selected as string | null;
+}
+
+export async function watchRepo(repoPath: string): Promise<void> {
+  return invoke<void>('watch_repo', { repoPath });
+}
+
+export async function stopWatching(): Promise<void> {
+  return invoke<void>('stop_watching');
+}
+
+export interface GitChangeEvent {
+  change_type: 'branch' | 'index' | 'refs';
+}
+
+export async function onGitChange(callback: (event: GitChangeEvent) => void): Promise<UnlistenFn> {
+  return listen<GitChangeEvent>('git-changed', (event) => {
+    callback(event.payload);
+  });
 }

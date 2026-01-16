@@ -3,6 +3,7 @@
   import { selectedFile, currentDiff, repoPath, baseBranch, isLoading, allCollapsed, setHover, clearHover } from '../stores';
   import { getFileDiff } from '../tauri';
   import { cn } from '$lib/utils';
+  import FileTreeItem from './FileTreeItem.svelte';
 
   interface Props {
     node: FileTreeNode;
@@ -11,7 +12,8 @@
 
   let { node, depth }: Props = $props();
 
-  let expanded = $state(node.expanded ?? true);
+  // Initialize expanded state - intentionally captures initial value only
+  let expanded = $state((() => node.expanded ?? true)());
 
   // React to collapse all trigger
   $effect(() => {
@@ -126,7 +128,7 @@
 
   {#if node.isDirectory && expanded}
     {#each node.children as child (child.path)}
-      <svelte:self node={child} depth={depth + 1} />
+      <FileTreeItem node={child} depth={depth + 1} />
     {/each}
   {/if}
 </div>

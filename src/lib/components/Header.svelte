@@ -1,6 +1,6 @@
 <script lang="ts">
   import { repoPath, repoInfo, baseBranch, isLoading, changedFiles, selectedFile, currentDiff, error, setHover, clearHover } from '../stores';
-  import { selectFolder, getRepoInfo, getChangedFiles } from '../tauri';
+  import { selectFolder, getRepoInfo, getChangedFiles, watchRepo } from '../tauri';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';
   import BranchSelector from './BranchSelector.svelte';
@@ -23,7 +23,9 @@
       const info = await getRepoInfo($repoPath);
       $repoInfo = info;
       $baseBranch = info.default_base;
-      await refresh();
+      await refreshFiles();
+      // Start watching for git changes
+      await watchRepo($repoPath);
     } catch (e) {
       $error = e as string;
     } finally {
@@ -31,11 +33,33 @@
     }
   }
 
+  // Full refresh - updates branch info and files
   async function refresh() {
-    if (!$repoPath || !$baseBranch) return;
+    if (!$repoPath) return;
 
     $isLoading = true;
     $error = null;
+
+    try {
+      // Refresh repo info to get current branch
+      const info = await getRepoInfo($repoPath);
+      $repoInfo = info;
+      // Keep current base branch unless it no longer exists
+      const branchExists = info.branches.some(b => b.name === $baseBranch);
+      if (!branchExists) {
+        $baseBranch = info.default_base;
+      }
+      await refreshFiles();
+    } catch (e) {
+      $error = e as string;
+    } finally {
+      $isLoading = false;
+    }
+  }
+
+  // Just refresh the file list
+  async function refreshFiles() {
+    if (!$repoPath || !$baseBranch) return;
 
     try {
       const files = await getChangedFiles($repoPath, $baseBranch);
@@ -44,17 +68,15 @@
       $currentDiff = null;
     } catch (e) {
       $error = e as string;
-    } finally {
-      $isLoading = false;
     }
   }
 
   function handleBranchChange(newBranch: string) {
     $baseBranch = newBranch;
-    refresh();
+    refreshFiles();
   }
 
-  $: localBranches = $repoInfo?.branches.filter(b => !b.is_remote) ?? [];
+  const localBranches = $derived($repoInfo?.branches.filter(b => !b.is_remote) ?? []);
 </script>
 
 <header class="flex items-center justify-between px-4 py-2.5 bg-card border-b border-border">

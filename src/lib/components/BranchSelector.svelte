@@ -34,6 +34,7 @@
 </script>
 
 <div
+  role="group"
   onmouseenter={() => setHover({ label: 'base branch', description: 'comparing changes against this branch' })}
   onmouseleave={clearHover}
 >
