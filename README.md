@@ -42,6 +42,10 @@ The existing options are painful:
 [+] keyboard-first          — navigate without touching your mouse
 ```
 
+<p align="center">
+  <img src="docs/diff_view.png" alt="Diff View" width="800" />
+</p>
+
 ## Install
 
 ```bash
