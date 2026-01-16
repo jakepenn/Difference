@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/hero.png" alt="Difference" width="800" />
+  <img src="docs/landing_view.png" alt="Difference" width="800" />
 </p>
 
 <h1 align="center">DIFFERENCE</h1>
