@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { hoverContext } from '../stores/ui';
-  import { repoPath, repoInfo } from '../stores/diff';
+  import { hoverContext, repoPath, repoInfo } from '../stores';
 </script>
 
 <footer class="h-6 flex items-center justify-between px-3 bg-card border-t border-border text-[10px] text-muted-foreground">

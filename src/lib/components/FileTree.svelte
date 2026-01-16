@@ -11,9 +11,10 @@
     showModified,
     showDeleted,
     showCosmetic,
-    allCollapsed
-  } from '../stores/diff';
-  import { setHover, clearHover } from '../stores/ui';
+    allCollapsed,
+    setHover,
+    clearHover
+  } from '../stores';
   import FileTreeItem from './FileTreeItem.svelte';
   import { Separator } from '$lib/components/ui/separator';
   import { cn } from '$lib/utils';

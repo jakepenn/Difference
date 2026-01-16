@@ -19,6 +19,7 @@ env:
 jobs:
   build-mac:
     runs-on: macos-latest
+    environment: ci
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -127,6 +128,7 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
+    environment: ci
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

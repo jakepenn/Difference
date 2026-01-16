@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { repoPath, repoInfo, baseBranch, isLoading, changedFiles, selectedFile, currentDiff, error } from '../stores/diff';
-  import { setHover, clearHover } from '../stores/ui';
+  import { repoPath, repoInfo, baseBranch, isLoading, changedFiles, selectedFile, currentDiff, error, setHover, clearHover } from '../stores';
   import { selectFolder, getRepoInfo, getChangedFiles } from '../tauri';
   import { Button } from '$lib/components/ui/button';
   import { Badge } from '$lib/components/ui/badge';

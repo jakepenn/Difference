@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { FileTreeNode } from '../types';
-  import { selectedFile, currentDiff, repoPath, baseBranch, isLoading, allCollapsed } from '../stores/diff';
-  import { setHover, clearHover } from '../stores/ui';
+  import { selectedFile, currentDiff, repoPath, baseBranch, isLoading, allCollapsed, setHover, clearHover } from '../stores';
   import { getFileDiff } from '../tauri';
   import { cn } from '$lib/utils';
 

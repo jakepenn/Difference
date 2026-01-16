@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/landing_view.png" alt="Difference" width="800" />
+  <img src=".github/assets/landing_view.png" alt="Difference" width="800" />
 </p>
 
 <h1 align="center">DIFFERENCE</h1>
@@ -43,7 +43,7 @@ The existing options are painful:
 ```
 
 <p align="center">
-  <img src="docs/diff_view.png" alt="Diff View" width="800" />
+  <img src=".github/assets/diff_view.png" alt="Diff View" width="800" />
 </p>
 
 ## Install

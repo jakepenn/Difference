@@ -4,7 +4,7 @@
   import * as Popover from '$lib/components/ui/popover';
   import { Button } from '$lib/components/ui/button';
   import { cn } from '$lib/utils';
-  import { setHover, clearHover } from '../stores/ui';
+  import { setHover, clearHover } from '../stores';
   import type { BranchInfo } from '../types';
 
   interface Props {

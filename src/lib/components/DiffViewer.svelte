@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { currentDiff, selectedFile, viewMode, repoPath } from '../stores/diff';
-  import { setHover, clearHover } from '../stores/ui';
+  import { currentDiff, selectedFile, viewMode, repoPath, setHover, clearHover } from '../stores';
   import { openInEditor } from '../tauri';
   import { Button } from '$lib/components/ui/button';
   import * as ToggleGroup from '$lib/components/ui/toggle-group';

@@ -3,7 +3,7 @@
   import FileTree from '$lib/components/FileTree.svelte';
   import DiffViewer from '$lib/components/DiffViewer.svelte';
   import StatusBar from '$lib/components/StatusBar.svelte';
-  import { repoInfo } from '$lib/stores/diff';
+  import { repoInfo } from '$lib/stores';
 </script>
 
 <div class="h-screen flex flex-col bg-background text-foreground">
