@@ -112,7 +112,9 @@ jobs:
       - name: Create and sign DMG
         if: github.event_name != 'pull_request'
         run: |
-          DMG_PATH="src-tauri/target/universal-apple-darwin/release/bundle/dmg/Difference_universal.dmg"
+          # Find the DMG file (name includes version)
+          DMG_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          echo "Found DMG: $DMG_PATH"
 
           # Sign DMG
           codesign --timestamp -fs "${{ env.APPLE_SIGNING_IDENTITY }}" "$DMG_PATH"
@@ -120,7 +122,9 @@ jobs:
       - name: Notarize DMG
         if: github.event_name != 'pull_request'
         run: |
-          DMG_PATH="src-tauri/target/universal-apple-darwin/release/bundle/dmg/Difference_universal.dmg"
+          # Find the DMG file (name includes version)
+          DMG_PATH=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name "*.dmg" | head -1)
+          echo "Notarizing: $DMG_PATH"
 
           xcrun notarytool submit "$DMG_PATH" \
             --keychain-profile "notary-profile" \
