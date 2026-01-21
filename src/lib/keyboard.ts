@@ -171,12 +171,21 @@ export async function refresh() {
   const base = get(baseBranch);
   if (!path || !base) return;
 
+  const previouslySelected = get(selectedFile);
+
   isLoading.set(true);
   try {
     const files = await getChangedFiles(path, base);
     changedFiles.set(files);
-    selectedFile.set(null);
-    currentDiff.set(null);
+
+    // Preserve selection if the file still exists in the updated list
+    if (previouslySelected && files.find(f => f.path === previouslySelected)) {
+      const diff = await getFileDiff(path, previouslySelected, base);
+      currentDiff.set(diff);
+    } else {
+      selectedFile.set(null);
+      currentDiff.set(null);
+    }
   } finally {
     isLoading.set(false);
   }

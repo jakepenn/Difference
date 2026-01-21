@@ -61,11 +61,20 @@
   async function refreshFiles() {
     if (!$repoPath || !$baseBranch) return;
 
+    const previouslySelected = $selectedFile;
+
     try {
       const files = await getChangedFiles($repoPath, $baseBranch);
       $changedFiles = files;
-      $selectedFile = null;
-      $currentDiff = null;
+
+      // Preserve selection if the file still exists in the updated list
+      if (previouslySelected && files.find(f => f.path === previouslySelected)) {
+        const { getFileDiff } = await import('../tauri');
+        $currentDiff = await getFileDiff($repoPath, previouslySelected, $baseBranch);
+      } else {
+        $selectedFile = null;
+        $currentDiff = null;
+      }
     } catch (e) {
       $error = e as string;
     }

@@ -443,14 +443,13 @@ pub fn get_file_diff(repo_path: &str, file_path: &str, base_branch: &str) -> Res
         .tree()
         .map_err(|e| e.message().to_string())?;
 
-    let head_tree = head_commit.tree().map_err(|e| e.message().to_string())?;
-
     let mut diff_opts = DiffOptions::new();
     diff_opts.pathspec(file_path);
     diff_opts.context_lines(3);
 
+    // Diff from merge base to working directory (includes both committed and uncommitted changes)
     let diff = repo
-        .diff_tree_to_tree(Some(&merge_base_tree), Some(&head_tree), Some(&mut diff_opts))
+        .diff_tree_to_workdir_with_index(Some(&merge_base_tree), Some(&mut diff_opts))
         .map_err(|e| e.message().to_string())?;
 
     let hunks: RefCell<Vec<DiffHunk>> = RefCell::new(Vec::new());
