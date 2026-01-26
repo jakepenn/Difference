@@ -443,59 +443,122 @@ pub fn get_file_diff(repo_path: &str, file_path: &str, base_branch: &str) -> Res
         .tree()
         .map_err(|e| e.message().to_string())?;
 
+    let head_tree = head_commit.tree().map_err(|e| e.message().to_string())?;
+
+    // Helper to extract hunks from a diff
+    fn extract_hunks(diff: &git2::Diff) -> Result<(Vec<DiffHunk>, bool), String> {
+        let hunks: RefCell<Vec<DiffHunk>> = RefCell::new(Vec::new());
+        let is_binary = RefCell::new(false);
+
+        diff.foreach(
+            &mut |delta, _| {
+                *is_binary.borrow_mut() = delta.new_file().is_binary() || delta.old_file().is_binary();
+                true
+            },
+            Some(&mut |_, _| true),
+            Some(&mut |_delta, hunk| {
+                hunks.borrow_mut().push(DiffHunk {
+                    old_start: hunk.old_start(),
+                    old_lines: hunk.old_lines(),
+                    new_start: hunk.new_start(),
+                    new_lines: hunk.new_lines(),
+                    lines: Vec::new(),
+                    is_cosmetic: false,
+                });
+                true
+            }),
+            Some(&mut |_delta, _hunk, line| {
+                if let Some(current_hunk) = hunks.borrow_mut().last_mut() {
+                    let line_type = match line.origin() {
+                        '+' => "add",
+                        '-' => "delete",
+                        ' ' => "context",
+                        _ => "context",
+                    };
+
+                    let content = String::from_utf8_lossy(line.content()).to_string();
+
+                    current_hunk.lines.push(DiffLine {
+                        content,
+                        line_type: line_type.to_string(),
+                        old_lineno: line.old_lineno(),
+                        new_lineno: line.new_lineno(),
+                    });
+                }
+                true
+            }),
+        )
+        .map_err(|e| e.message().to_string())?;
+
+        Ok((hunks.into_inner(), is_binary.into_inner()))
+    }
+
     let mut diff_opts = DiffOptions::new();
     diff_opts.pathspec(file_path);
     diff_opts.context_lines(3);
 
-    // Diff from merge base to working directory (includes both committed and uncommitted changes)
-    let diff = repo
-        .diff_tree_to_workdir_with_index(Some(&merge_base_tree), Some(&mut diff_opts))
+    // First try: diff from merge base to HEAD (committed changes)
+    let committed_diff = repo
+        .diff_tree_to_tree(Some(&merge_base_tree), Some(&head_tree), Some(&mut diff_opts))
         .map_err(|e| e.message().to_string())?;
 
-    let hunks: RefCell<Vec<DiffHunk>> = RefCell::new(Vec::new());
-    let is_binary = RefCell::new(false);
+    let (mut hunks, mut is_binary) = extract_hunks(&committed_diff)?;
 
-    diff.foreach(
-        &mut |delta, _| {
-            *is_binary.borrow_mut() = delta.new_file().is_binary() || delta.old_file().is_binary();
-            true
-        },
-        Some(&mut |_, _| true),
-        Some(&mut |_delta, hunk| {
-            hunks.borrow_mut().push(DiffHunk {
-                old_start: hunk.old_start(),
-                old_lines: hunk.old_lines(),
-                new_start: hunk.new_start(),
-                new_lines: hunk.new_lines(),
-                lines: Vec::new(),
-                is_cosmetic: false,
-            });
-            true
-        }),
-        Some(&mut |_delta, _hunk, line| {
-            if let Some(current_hunk) = hunks.borrow_mut().last_mut() {
-                let line_type = match line.origin() {
-                    '+' => "add",
-                    '-' => "delete",
-                    ' ' => "context",
-                    _ => "context",
-                };
+    // If no committed changes found, try working directory changes (uncommitted)
+    if hunks.is_empty() {
+        let mut diff_opts_workdir = DiffOptions::new();
+        diff_opts_workdir.pathspec(file_path);
+        diff_opts_workdir.context_lines(3);
+        diff_opts_workdir.include_untracked(true);
 
-                let content = String::from_utf8_lossy(line.content()).to_string();
+        let workdir_diff = repo
+            .diff_tree_to_workdir_with_index(Some(&merge_base_tree), Some(&mut diff_opts_workdir))
+            .map_err(|e| e.message().to_string())?;
 
-                current_hunk.lines.push(DiffLine {
-                    content,
-                    line_type: line_type.to_string(),
-                    old_lineno: line.old_lineno(),
-                    new_lineno: line.new_lineno(),
-                });
+        let (workdir_hunks, workdir_is_binary) = extract_hunks(&workdir_diff)?;
+        hunks = workdir_hunks;
+        is_binary = workdir_is_binary;
+    }
+
+    // If still no hunks, file might be untracked - read it directly
+    if hunks.is_empty() {
+        let workdir = repo.workdir().ok_or("No working directory")?;
+        let full_path = workdir.join(file_path);
+
+        if full_path.exists() {
+            // Check if it's a binary file
+            let content = std::fs::read(&full_path).map_err(|e| e.to_string())?;
+            let is_binary_file = content.iter().take(8000).any(|&b| b == 0);
+
+            if is_binary_file {
+                is_binary = true;
+            } else {
+                // Create synthetic diff showing all lines as additions
+                let text = String::from_utf8_lossy(&content);
+                let lines: Vec<DiffLine> = text
+                    .lines()
+                    .enumerate()
+                    .map(|(i, line)| DiffLine {
+                        content: format!("{}\n", line),
+                        line_type: "add".to_string(),
+                        old_lineno: None,
+                        new_lineno: Some((i + 1) as u32),
+                    })
+                    .collect();
+
+                if !lines.is_empty() {
+                    hunks.push(DiffHunk {
+                        old_start: 0,
+                        old_lines: 0,
+                        new_start: 1,
+                        new_lines: lines.len() as u32,
+                        lines,
+                        is_cosmetic: false,
+                    });
+                }
             }
-            true
-        }),
-    )
-    .map_err(|e| e.message().to_string())?;
-
-    let mut hunks = hunks.into_inner();
+        }
+    }
 
     // Analyze each hunk for cosmetic changes
     for hunk in hunks.iter_mut() {
@@ -508,7 +571,7 @@ pub fn get_file_diff(repo_path: &str, file_path: &str, base_branch: &str) -> Res
     Ok(FileDiff {
         path: file_path.to_string(),
         hunks,
-        is_binary: is_binary.into_inner(),
+        is_binary,
         is_cosmetic: all_cosmetic,
     })
 }
